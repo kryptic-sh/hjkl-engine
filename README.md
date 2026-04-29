@@ -5,7 +5,7 @@ Vim FSM, motion grammar, and editor traits — the no-I/O core of the hjkl stack
 [![CI](https://github.com/kryptic-sh/hjkl/actions/workflows/ci.yml/badge.svg)](https://github.com/kryptic-sh/hjkl/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/hjkl-engine.svg)](https://crates.io/crates/hjkl-engine)
 [![docs.rs](https://img.shields.io/docsrs/hjkl-engine)](https://docs.rs/hjkl-engine)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Website](https://img.shields.io/badge/website-hjkl.kryptic.sh-7ee787)](https://hjkl.kryptic.sh)
 
 Vim-mode editor engine built on top of `hjkl-buffer`. Exposes an `Editor` you
@@ -55,6 +55,6 @@ hjkl_engine::step(&mut editor, input);
 
 ## License
 
-MIT. See [LICENSE](../../LICENSE).
+MIT. See [LICENSE](LICENSE).
 
 [plan]: https://github.com/kryptic-sh/hjkl/blob/main/MIGRATION.md

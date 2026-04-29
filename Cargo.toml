@@ -1,7 +1,8 @@
-[workspace]
-resolver = "2"
-
-[workspace.package]
+[package]
+name = "hjkl-engine"
+description = "Vim FSM, motion grammar, and ex commands. Pre-1.0 churn."
+keywords = ["vim", "modal", "editor", "fsm"]
+categories = ["text-editors"]
 version = "0.3.0"
 edition = "2024"
 license = "MIT"
@@ -9,24 +10,6 @@ repository = "https://github.com/kryptic-sh/hjkl-engine"
 authors = ["mxaddict <mxaddict@kryptic.sh>"]
 rust-version = "1.95"
 homepage = "https://hjkl.kryptic.sh"
-readme = "README.md"
-
-[profile.release]
-lto = "thin"
-codegen-units = 1
-
-[package]
-name = "hjkl-engine"
-description = "Vim FSM, motion grammar, and ex commands. Pre-1.0 churn."
-keywords = ["vim", "modal", "editor", "fsm"]
-categories = ["text-editors"]
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-repository.workspace = true
-authors.workspace = true
-rust-version.workspace = true
-homepage.workspace = true
 readme = "README.md"
 
 [features]

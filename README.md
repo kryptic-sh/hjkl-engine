@@ -2,7 +2,7 @@
 
 Vim FSM, motion grammar, and editor traits — the no-I/O core of the hjkl stack.
 
-[![CI](https://github.com/kryptic-sh/hjkl/actions/workflows/ci.yml/badge.svg)](https://github.com/kryptic-sh/hjkl/actions/workflows/ci.yml)
+[![CI](https://github.com/kryptic-sh/hjkl-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/kryptic-sh/hjkl-engine/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/hjkl-engine.svg)](https://crates.io/crates/hjkl-engine)
 [![docs.rs](https://img.shields.io/docsrs/hjkl-engine)](https://docs.rs/hjkl-engine)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -16,7 +16,7 @@ sqeel-vim with full git history.
 
 ## Status
 
-`0.2.0` — frozen public API; SPEC frozen per [SPEC.md](SPEC.md). `Buffer` trait
+`0.3.0` — frozen public API; SPEC frozen per [SPEC.md](SPEC.md). `Buffer` trait
 sealed (14 methods across Cursor/Query/BufferEdit/Search). `Editor<B, H>`
 generic over buffer backend + host.
 
@@ -33,7 +33,7 @@ feature flags so wasm/no_std consumers can opt out.
 ## Usage
 
 ```toml
-hjkl-engine = "0.2"
+hjkl-engine = "0.3"
 ```
 
 ```rust,no_run
@@ -57,4 +57,3 @@ hjkl_engine::step(&mut editor, input);
 
 MIT. See [LICENSE](LICENSE).
 
-[plan]: https://github.com/kryptic-sh/hjkl/blob/main/MIGRATION.md

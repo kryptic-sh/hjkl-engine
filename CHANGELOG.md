@@ -6,6 +6,13 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-05-03
+
+### Removed
+
+- `SPEC.md` deleted; rustdoc on [docs.rs](https://docs.rs/hjkl-engine) is now
+  the canonical API reference. All in-source references to `SPEC.md` removed.
+
 ## [0.3.1] - 2026-04-30
 
 ### Changed

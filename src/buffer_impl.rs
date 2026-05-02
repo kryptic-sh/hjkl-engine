@@ -1,21 +1,18 @@
 //! Canonical [`Buffer`] trait impl over [`hjkl_buffer::Buffer`].
 //!
-//! Wires the SPEC trait surface (`Cursor` / `Query` / `BufferEdit` /
+//! Wires the engine trait surface (`Cursor` / `Query` / `BufferEdit` /
 //! `Search`, sealed via [`crate::types::sealed::Sealed`]) onto the
 //! in-tree rope-backed buffer. Pos⇄Position conversion lives at this
 //! boundary — engine code (FSM, editor) keeps using `hjkl_buffer`'s
 //! concrete API directly until the motion / fold relocation lands;
-//! external trait users see the SPEC surface.
-//!
-//! See `crates/hjkl-engine/SPEC.md` §"`Buffer` trait surface".
+//! external trait users see the engine trait surface.
 //!
 //! # Why concrete-Editor today
 //!
 //! The trait surface here is 13 methods. The engine FSM today calls
 //! ~46 distinct methods on `hjkl_buffer::Buffer` — most of them are
-//! motion / fold / viewport helpers that SPEC.md explicitly **excludes**
-//! from the trait ("motions don't belong on `Buffer` — they're computed
-//! over the buffer, not delegated to it"). Generic-ifying
+//! motion / fold / viewport helpers that don't belong on `Buffer`
+//! (they're computed over the buffer, not delegated to it). Generic-ifying
 //! `Editor<B: Buffer, H: Host>` therefore requires relocating those
 //! ~33 helpers from `hjkl-buffer` into `hjkl-engine` as free functions
 //! over `B: Cursor + Query`. That's a separate, multi-thousand-LOC

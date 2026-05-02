@@ -586,7 +586,7 @@ pub struct Editor<
     /// 0.1.0 (Patch C-δ): generic over `B: Buffer` per SPEC §"Editor
     /// surface". Default `B = hjkl_buffer::Buffer`. The vim FSM body
     /// and `Editor::mutate_edit` are concrete on `hjkl_buffer::Buffer`
-    /// for 0.1.0 — see SPEC.md §"Out of scope" and `crate::buf_helpers::apply_buffer_edit`.
+    /// for 0.1.0 — see `crate::buf_helpers::apply_buffer_edit`.
     pub(super) buffer: B,
     /// Style intern table for the migration buffer's opaque
     /// `Span::style` ids. Phase 7d-ii-a wiring — `apply_window_spans`

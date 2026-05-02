@@ -1,4 +1,4 @@
-//! Core types for the planned 0.1.0 trait surface (per `SPEC.md`).
+//! Core types for the engine trait surface.
 //!
 //! These are introduced alongside the legacy sqeel-vim public API. The
 //! trait extraction (phase 5) progressively rewires the existing FSM and
@@ -928,8 +928,7 @@ pub(crate) mod sealed {
     pub trait Sealed {}
 }
 
-/// Cursor sub-trait of [`Buffer`]. Pre-0.1.0; signature follows
-/// SPEC.md §"`Buffer` trait surface".
+/// Cursor sub-trait of [`Buffer`].
 ///
 /// `Pos` here is the engine's grapheme-indexed [`Pos`] type. Buffer
 /// implementations convert at the boundary if their internal indexing
@@ -1033,8 +1032,8 @@ pub trait BufferEdit: Send {
     }
 }
 
-/// Search sub-trait of [`Buffer`]. The pattern is owned by the engine
-/// (see SPEC.md "Open issues"); buffers do not cache compiled regexes.
+/// Search sub-trait of [`Buffer`]. The pattern is owned by the engine;
+/// buffers do not cache compiled regexes.
 pub trait Search: Send {
     /// First match at-or-after `from`. `None` when no match remains.
     fn find_next(&self, from: Pos, pat: &regex::Regex) -> Option<core::ops::Range<Pos>>;

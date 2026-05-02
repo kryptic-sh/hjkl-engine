@@ -6,7 +6,7 @@
 //! - `Buffer::cursor_screen_row` → [`cursor_screen_row`]
 //! - `Buffer::max_top_for_height` → [`max_top_for_height`]
 //!
-//! 0.0.42 (Patch C-δ.7): SPEC.md "Viewport on Host" decision excludes
+//! 0.0.42 (Patch C-δ.7): The "Viewport on Host" decision excludes
 //! viewport math from the `Buffer` trait surface. Pre-0.0.42 the engine
 //! reached through to the inherent buffer methods (4 resistant reaches
 //! flagged in the 0.0.41 CHANGELOG); this module lifts that math onto

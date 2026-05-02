@@ -24,8 +24,6 @@
 //! `iskeyword` spec so the host can change it without re-publishing
 //! it onto the buffer. Both have lived as `Editor` fields since 0.0.28.
 //!
-//! [SPEC.md]: https://github.com/kryptic-sh/hjkl/blob/main/crates/hjkl-engine/SPEC.md
-
 use hjkl_buffer::{Position, Wrap, is_keyword_char, wrap};
 
 use crate::types::{Cursor, FoldProvider, Pos, Query};

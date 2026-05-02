@@ -16,9 +16,10 @@ sqeel-vim with full git history.
 
 ## Status
 
-`0.3.0` — frozen public API; SPEC frozen per [SPEC.md](SPEC.md). `Buffer` trait
-sealed (14 methods across Cursor/Query/BufferEdit/Search). `Editor<B, H>`
-generic over buffer backend + host.
+`0.3` — `Buffer` trait sealed (14 methods across
+Cursor/Query/BufferEdit/Search). `Editor<B, H>` generic over buffer backend +
+host. See [docs.rs](https://docs.rs/hjkl-engine) for the canonical API
+reference.
 
 ## Features
 
@@ -56,4 +57,3 @@ hjkl_engine::step(&mut editor, input);
 ## License
 
 MIT. See [LICENSE](LICENSE).
-

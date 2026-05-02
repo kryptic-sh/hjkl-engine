@@ -8,11 +8,10 @@
 //! highlights are painted in the same single-pass as text.
 //!
 //! Imported wholesale from sqeel-vim with full git history. The trait
-//! extraction (Selection / SelectionSet / Buffer + Host sub-traits per
-//! [`SPEC.md`][spec]) lands progressively under [`crate::types`]. Pre-1.0
-//! churn — the public surface may change in patch bumps.
-//!
-//! [spec]: https://github.com/kryptic-sh/hjkl/blob/main/crates/hjkl-engine/SPEC.md
+//! extraction (Selection / SelectionSet / Buffer + Host sub-traits) lands
+//! progressively under [`crate::types`]. Pre-1.0 churn — the public surface
+//! may change in patch bumps. See [docs.rs](https://docs.rs/hjkl-engine) for
+//! the canonical API reference.
 //!
 //! The legacy public surface is intentionally narrow:
 //!

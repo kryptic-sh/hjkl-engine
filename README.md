@@ -16,10 +16,9 @@ sqeel-vim with full git history.
 
 ## Status
 
-`0.3` — `Buffer` trait sealed (14 methods across
-Cursor/Query/BufferEdit/Search). `Editor<B, H>` generic over buffer backend +
-host. See [docs.rs](https://docs.rs/hjkl-engine) for the canonical API
-reference.
+`Editor<B, H>` is generic over buffer backend + host; the `Buffer` trait splits
+into Cursor / Query / BufferEdit / Search subtraits. See
+[docs.rs](https://docs.rs/hjkl-engine) for the canonical API reference.
 
 ## Features
 

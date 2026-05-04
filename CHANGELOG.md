@@ -6,6 +6,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-05-05
+
+### Fixed
+
+- `pos_at_byte` no longer panics when the requested byte index lands inside a
+  multi-byte UTF-8 codepoint. The function now rounds down to the nearest char
+  boundary so the returned `Pos` points at the column of the containing char.
+  Caught by the cargo-fuzz `handle_key` target on a Cyrillic seed.
+
 ## [0.3.5] - 2026-05-05
 
 ### Added
@@ -53,7 +62,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 - Standalone `LICENSE`, `.gitignore`, and `ci.yml` workflow at the repo root.
 
-[Unreleased]: https://github.com/kryptic-sh/hjkl-engine/compare/v0.3.5...HEAD
+[Unreleased]: https://github.com/kryptic-sh/hjkl-engine/compare/v0.3.6...HEAD
+[0.3.6]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.6
 [0.3.5]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.5
 [0.3.4]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.4
 [0.3.3]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.3

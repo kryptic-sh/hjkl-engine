@@ -97,8 +97,14 @@ impl Cursor for RopeBuffer {
             // `byte` indexing the trailing `\n` itself maps to the
             // start of the next row (col 0).
             if remaining <= line_bytes {
-                // Convert byte offset within line to char column.
-                let col = line[..remaining.min(line_bytes)].chars().count();
+                // Round down to the nearest char boundary so a byte index
+                // landing inside a multi-byte codepoint maps to the column
+                // of the char that contains it (not a slice panic).
+                let mut end = remaining.min(line_bytes);
+                while end > 0 && !line.is_char_boundary(end) {
+                    end -= 1;
+                }
+                let col = line[..end].chars().count();
                 return Pos {
                     line: r as u32,
                     col: col as u32,

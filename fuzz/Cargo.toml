@@ -1,3 +1,5 @@
+[workspace]
+
 [package]
 name = "hjkl-engine-fuzz"
 version = "0.0.0"

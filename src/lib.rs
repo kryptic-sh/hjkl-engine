@@ -31,7 +31,7 @@ mod viewport_math;
 mod vim;
 
 pub use editor::{Editor, LspIntent};
-pub use input::{Input, Key};
+pub use input::{Input, Key, decode_macro};
 pub use registers::{Registers, Slot};
 
 pub use buffer_impl::{BufferFoldProvider, BufferFoldProviderMut};

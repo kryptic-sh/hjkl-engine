@@ -6,6 +6,26 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-05-05
+
+### Added
+
+- New public module `hjkl_engine::substitute` exposing `parse_substitute`,
+  `apply_substitute`, `SubstituteCmd`, `SubstFlags`, `SubstituteOutcome`, and
+  `SubstError`. These types support the `:[range]s/pattern/replacement/[flags]`
+  ex-command surface in TUI hosts.
+- `parse_substitute` parses the `/pattern/replacement/flags` tail (delimiter
+  must be `/`; flags: `g`, `i`, `I`, `c`). Empty pattern returns `None` so the
+  caller can fall back to `Editor::last_search`. Replacement supports `&` (whole
+  match), `\1`…`\9` (capture groups), `\\` (literal backslash), `\&` (literal
+  ampersand).
+- `apply_substitute` applies a `SubstituteCmd` over a 0-based inclusive
+  `RangeInclusive<u32>` of buffer lines. Handles case-sensitivity precedence
+  (`I` > `i` > editor `ignore_case`), updates `Editor::set_last_search` on
+  success, and returns a `SubstituteOutcome` with `replacements` and
+  `lines_changed` counts.
+- All new items are re-exported at the crate root.
+
 ## [0.3.6] - 2026-05-05
 
 ### Fixed
@@ -62,7 +82,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 - Standalone `LICENSE`, `.gitignore`, and `ci.yml` workflow at the repo root.
 
-[Unreleased]: https://github.com/kryptic-sh/hjkl-engine/compare/v0.3.6...HEAD
+[Unreleased]: https://github.com/kryptic-sh/hjkl-engine/compare/v0.3.7...HEAD
+[0.3.7]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.7
 [0.3.6]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.6
 [0.3.5]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.5
 [0.3.4]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.4

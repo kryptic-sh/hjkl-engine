@@ -26,6 +26,7 @@ mod input;
 pub mod motions;
 mod registers;
 pub mod search;
+pub mod substitute;
 pub mod types;
 mod viewport_math;
 mod vim;
@@ -35,6 +36,9 @@ pub use input::{Input, Key, decode_macro};
 pub use registers::{Registers, Slot};
 
 pub use buffer_impl::{BufferFoldProvider, BufferFoldProviderMut};
+pub use substitute::{
+    SubstError, SubstFlags, SubstituteCmd, SubstituteOutcome, apply_substitute, parse_substitute,
+};
 pub use types::{
     Attrs, Buffer, BufferEdit, BufferId, Color, ContentEdit, Cursor, CursorShape, DefaultHost,
     Edit, EditorSnapshot, EngineError, FoldOp, FoldProvider, Highlight, HighlightKind, Host,

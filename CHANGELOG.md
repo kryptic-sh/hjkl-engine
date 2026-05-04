@@ -6,6 +6,13 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-05-04
+
+### Docs
+
+- Internal CHANGELOG hygiene: backfilled missing release entries and added
+  reference link definitions for all version headings. No functional changes.
+
 ## [0.3.3] - 2026-05-03
 
 ### Docs
@@ -37,7 +44,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 - Standalone `LICENSE`, `.gitignore`, and `ci.yml` workflow at the repo root.
 
-[Unreleased]: https://github.com/kryptic-sh/hjkl-engine/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/kryptic-sh/hjkl-engine/compare/v0.3.4...HEAD
+[0.3.4]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.4
 [0.3.3]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.3
 [0.3.2]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.2
 [0.3.1]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.1

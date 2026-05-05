@@ -284,6 +284,16 @@ pub struct Options {
     pub wrap: WrapMode,
     /// Wrap column for `gq{motion}` text reflow. Vim's default is 79.
     pub textwidth: u32,
+    /// Show absolute line numbers in the gutter. Matches `:set number`.
+    /// Default `true`.
+    pub number: bool,
+    /// Show relative line offsets in the gutter. Combined with `number`,
+    /// enables hybrid mode. Matches `:set relativenumber`. Default `false`.
+    pub relativenumber: bool,
+    /// Minimum gutter width in cells for the line-number column.
+    /// Width grows past this to fit the largest displayed number.
+    /// Matches vim's `:set numberwidth` / `:set nuw`. Default `4`. Range 1..=20.
+    pub numberwidth: usize,
 }
 
 /// Soft-wrap mode for the renderer + scroll math + `gj` / `gk`.
@@ -338,6 +348,9 @@ impl Default for Options {
             readonly: false,
             wrap: WrapMode::None,
             textwidth: 79,
+            number: true,
+            relativenumber: false,
+            numberwidth: 4,
         }
     }
 }
@@ -457,6 +470,24 @@ impl Options {
                 };
                 Ok(())
             }
+            "number" | "nu" => set_bool!(number),
+            "relativenumber" | "rnu" => set_bool!(relativenumber),
+            "numberwidth" | "nuw" => {
+                self.numberwidth = match val {
+                    OptionValue::Int(n) if (1..=20).contains(&n) => n as usize,
+                    OptionValue::Int(n) => {
+                        return Err(EngineError::Ex(format!(
+                            "option `{name}` must be in range 1..=20, got {n}"
+                        )));
+                    }
+                    other => {
+                        return Err(EngineError::Ex(format!(
+                            "option `{name}` expects int, got {other:?}"
+                        )));
+                    }
+                };
+                Ok(())
+            }
             other => Err(EngineError::Ex(format!("unknown option `{other}`"))),
         }
     }
@@ -483,6 +514,9 @@ impl Options {
             "readonly" | "ro" => OptionValue::Bool(self.readonly),
             "wrap" => OptionValue::Bool(!matches!(self.wrap, WrapMode::None)),
             "linebreak" | "lbr" => OptionValue::Bool(matches!(self.wrap, WrapMode::Word)),
+            "number" | "nu" => OptionValue::Bool(self.number),
+            "relativenumber" | "rnu" => OptionValue::Bool(self.relativenumber),
+            "numberwidth" | "nuw" => OptionValue::Int(self.numberwidth as i64),
             _ => return None,
         })
     }

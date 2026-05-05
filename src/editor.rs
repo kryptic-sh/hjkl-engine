@@ -778,6 +778,19 @@ pub struct Settings {
     /// abandoned and the next key starts a fresh sequence. Matches
     /// vim's `:set timeoutlen` / `:set tm` (millis). Default 1000ms.
     pub timeout_len: core::time::Duration,
+    /// When true, render absolute line numbers in the gutter. Matches
+    /// vim's `:set number` / `:set nu`. Default `true`.
+    pub number: bool,
+    /// When true, render line numbers as offsets from the cursor row.
+    /// Combined with `number`, the cursor row shows its absolute number
+    /// while other rows show the relative offset (vim's `nu+rnu` hybrid).
+    /// Matches vim's `:set relativenumber` / `:set rnu`. Default `false`.
+    pub relativenumber: bool,
+    /// Minimum gutter width in cells for the line-number column.
+    /// Width grows past this to fit the largest displayed number.
+    /// Matches vim's `:set numberwidth` / `:set nuw`. Default `4`.
+    /// Range 1..=20.
+    pub numberwidth: usize,
 }
 
 impl Default for Settings {
@@ -799,6 +812,9 @@ impl Default for Settings {
             undo_break_on_motion: true,
             iskeyword: "@,48-57,_,192-255".to_string(),
             timeout_len: core::time::Duration::from_millis(1000),
+            number: true,
+            relativenumber: false,
+            numberwidth: 4,
         }
     }
 }
@@ -832,6 +848,9 @@ fn settings_from_options(o: &crate::types::Options) -> Settings {
         undo_break_on_motion: o.undo_break_on_motion,
         iskeyword: o.iskeyword.clone(),
         timeout_len: o.timeout_len,
+        number: o.number,
+        relativenumber: o.relativenumber,
+        numberwidth: o.numberwidth,
     }
 }
 
@@ -1746,7 +1765,12 @@ impl<H: crate::types::Host> Editor<hjkl_buffer::Buffer, H> {
         if pos_row < v.top_row || pos_col < v.top_col {
             return None;
         }
-        let lnum_width = buf_row_count(&self.buffer).to_string().len() as u16 + 2;
+        let lnum_width = if self.settings.number || self.settings.relativenumber {
+            let needed = buf_row_count(&self.buffer).to_string().len() + 1;
+            needed.max(self.settings.numberwidth) as u16
+        } else {
+            0
+        };
         let dy = (pos_row - v.top_row) as u16;
         // Convert char column to visual column so cursor lands on the
         // correct cell when the line contains tabs (which the renderer
@@ -2577,7 +2601,12 @@ impl<H: crate::types::Host> Editor<hjkl_buffer::Buffer, H> {
     fn mouse_to_doc_pos_xy(&self, area_x: u16, area_y: u16, col: u16, row: u16) -> (usize, usize) {
         let n = buf_row_count(&self.buffer);
         let inner_top = area_y.saturating_add(1); // tab bar row
-        let lnum_width = n.to_string().len() as u16 + 2;
+        let lnum_width = if self.settings.number || self.settings.relativenumber {
+            let needed = n.to_string().len() + 1;
+            needed.max(self.settings.numberwidth) as u16
+        } else {
+            0
+        };
         let content_x = area_x.saturating_add(1).saturating_add(lnum_width);
         let rel_row = row.saturating_sub(inner_top) as usize;
         let top = self.host.viewport().top_row;
@@ -3901,12 +3930,13 @@ mod tests {
             crate::types::Options::default(),
         );
         e.set_content("hello world");
-        // Gutter is `lnum_width + 1` = (1-digit row count + 2) + 1
-        // pane padding = 4 cells; click col 4 is the first char.
+        // Gutter width = max(numberwidth=4, digits+1=2) = 4 cells, plus
+        // 1 cell of pane padding (area_x.saturating_add(1)) = 5 total offset.
+        // Click col 5 → char 0; click col 7 → char 2.
         let area = ratatui::layout::Rect::new(0, 0, 80, 10);
-        e.mouse_click_in_rect(area, 4, 1);
+        e.mouse_click_in_rect(area, 5, 1);
         assert_eq!(e.cursor(), (0, 0));
-        e.mouse_click_in_rect(area, 6, 1);
+        e.mouse_click_in_rect(area, 7, 1);
         assert_eq!(e.cursor(), (0, 2));
     }
 

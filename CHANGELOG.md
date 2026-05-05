@@ -6,6 +6,28 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `Settings.numberwidth` (default 4, range 1..=20) with `:set numberwidth=N` /
+  `:set nuw=N` ex-command surface, matching vim's `'numberwidth'` option. Gutter
+  width is now `max(numberwidth, digits+1)` instead of a fixed `digits+2`.
+- Same field added to `Options` and wired through `settings_from_options`,
+  `set_by_name`, `get_by_name`.
+
+## [0.4.0] - 2026-05-06
+
+### Added
+
+- `Settings.number` and `Settings.relativenumber` boolean fields with `:set nu`
+  / `nonu` / `rnu` / `nornu` / `nu!` / `rnu!` ex-command surface (and full
+  `number` / `nonumber` / `relativenumber` / `norelativenumber` forms). `number`
+  defaults to `true` to preserve the existing always-on gutter; `relativenumber`
+  defaults to `false`.
+- Same two fields added to `Options` and wired through `settings_from_options`.
+- `cursor_screen_pos` and `mouse_to_doc_pos_xy` now honour `number` /
+  `relativenumber` when computing the gutter offset, so the terminal cursor
+  lands in the correct column when the gutter is suppressed.
+
 ## [0.3.8] - 2026-05-05
 
 ### Fixed
@@ -107,7 +129,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 - Standalone `LICENSE`, `.gitignore`, and `ci.yml` workflow at the repo root.
 
-[Unreleased]: https://github.com/kryptic-sh/hjkl-engine/compare/v0.3.8...HEAD
+[Unreleased]: https://github.com/kryptic-sh/hjkl-engine/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.4.0
 [0.3.8]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.8
 [0.3.7]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.7
 [0.3.6]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.6

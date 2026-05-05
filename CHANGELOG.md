@@ -6,6 +6,31 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.8] - 2026-05-05
+
+### Fixed
+
+- `G` now lands on the last content-bearing line rather than the phantom empty
+  row produced by a trailing newline in the buffer.
+- `dd` on the last line clamps the cursor to the new last row instead of leaving
+  it on the phantom empty row after deletion.
+- `d$` leaves the cursor on the final character of the shortened line (col
+  `n-1`) rather than one past it (col `n`).
+- All charwise deletes (`d<motion>`, `da"`, `daB`, etc.) apply the normal-mode
+  cursor clamp on return, preventing one-past-end col values.
+- `x` and `X` now write the deleted characters to the unnamed register `"` so
+  that `xp` correctly round-trips the deleted character.
+- Undo clamps the restored cursor to the last valid normal-mode column, fixing
+  the off-by-one after `a text<Esc>u` sequences.
+- `da<quote>` eats the trailing whitespace after the closing delimiter (or
+  leading whitespace if no trailing exists), matching vim's `:help text-objects`
+  "around" rule and avoiding double-space residue.
+- `daB` / `da{` cursor off-by-one fixed: cursor now lands on the last character
+  of the line preceding the deleted block.
+- `diB` / `di{` on a multi-line block now uses a linewise range over the
+  interior lines, preserving the newlines adjacent to `{` and `}` instead of
+  collapsing the block to a single line.
+
 ## [0.3.7] - 2026-05-05
 
 ### Added
@@ -82,7 +107,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 - Standalone `LICENSE`, `.gitignore`, and `ci.yml` workflow at the repo root.
 
-[Unreleased]: https://github.com/kryptic-sh/hjkl-engine/compare/v0.3.7...HEAD
+[Unreleased]: https://github.com/kryptic-sh/hjkl-engine/compare/v0.3.8...HEAD
+[0.3.8]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.8
 [0.3.7]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.7
 [0.3.6]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.6
 [0.3.5]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.5

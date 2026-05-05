@@ -3609,6 +3609,13 @@ fn run_operator_over_range<H: crate::types::Host>(
         Operator::Delete => {
             ed.push_undo();
             cut_vim_range(ed, top, bot, kind);
+            // After a charwise / inclusive delete the buffer cursor is
+            // placed at `start` by the edit path. In Normal mode the
+            // cursor max col is `line_len - 1`; clamp it here so e.g.
+            // `d$` doesn't leave the cursor one past the new line end.
+            if !matches!(kind, MotionKind::Linewise) {
+                clamp_cursor_to_normal_mode(ed);
+            }
             ed.vim.mode = Mode::Normal;
         }
         Operator::Change => {
@@ -3826,6 +3833,20 @@ fn order(a: (usize, usize), b: (usize, usize)) -> ((usize, usize), (usize, usize
     if a <= b { (a, b) } else { (b, a) }
 }
 
+/// Clamp the buffer cursor to normal-mode valid position: col may not
+/// exceed `line.chars().count().saturating_sub(1)` (or 0 on an empty
+/// line). Vim applies this clamp on every return to Normal mode after an
+/// operator or Esc-from-insert.
+fn clamp_cursor_to_normal_mode<H: crate::types::Host>(ed: &mut Editor<hjkl_buffer::Buffer, H>) {
+    let (row, col) = ed.cursor();
+    let line_chars = buf_line_chars(&ed.buffer, row);
+    let max_col = line_chars.saturating_sub(1);
+    if col > max_col {
+        buf_set_cursor_rc(&mut ed.buffer, row, max_col);
+        ed.push_buffer_cursor_to_textarea();
+    }
+}
+
 // ─── dd/cc/yy ──────────────────────────────────────────────────────────────
 
 fn execute_line_op<H: crate::types::Host>(
@@ -3857,10 +3878,25 @@ fn execute_line_op<H: crate::types::Host>(
             // non-blank* of the line that now occupies `row` — or, if
             // the deletion consumed the last line, the line above it.
             let total_after = buf_row_count(&ed.buffer);
-            let target_row = if deleted_through_last {
+            let raw_target = if deleted_through_last {
                 row.saturating_sub(1).min(total_after.saturating_sub(1))
             } else {
                 row.min(total_after.saturating_sub(1))
+            };
+            // Clamp off the trailing phantom empty row that arises from a
+            // buffer with a trailing newline (stored as ["...", ""]). If
+            // the target row is the trailing empty row and there is a real
+            // content row above it, use that instead — matching vim's view
+            // that the trailing `\n` is a terminator, not a separator.
+            let target_row = if raw_target > 0
+                && raw_target + 1 == total_after
+                && buf_line(&ed.buffer, raw_target)
+                    .map(str::is_empty)
+                    .unwrap_or(false)
+            {
+                raw_target - 1
+            } else {
+                raw_target
             };
             buf_set_cursor_rc(&mut ed.buffer, target_row, 0);
             ed.push_buffer_cursor_to_textarea();
@@ -4349,9 +4385,7 @@ fn text_object_range<H: crate::types::Host>(
         TextObject::Quote(q) => {
             quote_text_object(ed, q, inner).map(|(s, e)| (s, e, MotionKind::Exclusive))
         }
-        TextObject::Bracket(open) => {
-            bracket_text_object(ed, open, inner).map(|(s, e)| (s, e, MotionKind::Exclusive))
-        }
+        TextObject::Bracket(open) => bracket_text_object(ed, open, inner),
         TextObject::Paragraph => {
             paragraph_text_object(ed, inner).map(|(s, e)| (s, e, MotionKind::Linewise))
         }
@@ -4815,7 +4849,29 @@ fn quote_text_object<H: crate::types::Host>(
         }
         Some(((row, open + 1), (row, close)))
     } else {
-        Some(((row, open), (row, close + 1)))
+        // `da<q>` — "around" includes the surrounding whitespace on one
+        // side: trailing whitespace if any exists after the closing quote;
+        // otherwise leading whitespace before the opening quote. This
+        // matches vim's `:help text-objects` behaviour and avoids leaving
+        // a double-space when the quoted span sits mid-sentence.
+        let after_close = close + 1; // byte index after closing quote
+        if after_close < bytes.len() && bytes[after_close].is_ascii_whitespace() {
+            // Eat trailing whitespace run.
+            let mut end = after_close;
+            while end < bytes.len() && bytes[end].is_ascii_whitespace() {
+                end += 1;
+            }
+            Some(((row, open), (row, end)))
+        } else if open > 0 && bytes[open - 1].is_ascii_whitespace() {
+            // Eat leading whitespace run.
+            let mut start = open;
+            while start > 0 && bytes[start - 1].is_ascii_whitespace() {
+                start -= 1;
+            }
+            Some(((row, start), (row, close + 1)))
+        } else {
+            Some(((row, open), (row, close + 1)))
+        }
     }
 }
 
@@ -4823,7 +4879,7 @@ fn bracket_text_object<H: crate::types::Host>(
     ed: &Editor<hjkl_buffer::Buffer, H>,
     open: char,
     inner: bool,
-) -> Option<((usize, usize), (usize, usize))> {
+) -> Option<(Pos, Pos, MotionKind)> {
     let close = match open {
         '(' => ')',
         '[' => ']',
@@ -4843,15 +4899,38 @@ fn bracket_text_object<H: crate::types::Host>(
     let close_pos = find_close_bracket(lines, open_pos.0, open_pos.1 + 1, open, close)?;
     // End positions are *exclusive*.
     if inner {
+        // Multi-line `iB` / `i{` etc: vim deletes the full lines between
+        // the braces (linewise), preserving the `{` and `}` lines
+        // themselves and the newlines that directly abut them. E.g.:
+        //   {\n    body\n}\n  →  {\n}\n    (cursor on `}` line)
+        // Single-line `i{` falls back to charwise exclusive.
+        if close_pos.0 > open_pos.0 + 1 {
+            // There is at least one line strictly between open and close.
+            let inner_row_start = open_pos.0 + 1;
+            let inner_row_end = close_pos.0 - 1;
+            let end_col = lines
+                .get(inner_row_end)
+                .map(|l| l.chars().count())
+                .unwrap_or(0);
+            return Some((
+                (inner_row_start, 0),
+                (inner_row_end, end_col),
+                MotionKind::Linewise,
+            ));
+        }
         let inner_start = advance_pos(lines, open_pos);
         if inner_start.0 > close_pos.0
             || (inner_start.0 == close_pos.0 && inner_start.1 >= close_pos.1)
         {
             return None;
         }
-        Some((inner_start, close_pos))
+        Some((inner_start, close_pos, MotionKind::Exclusive))
     } else {
-        Some((open_pos, advance_pos(lines, close_pos)))
+        Some((
+            open_pos,
+            advance_pos(lines, close_pos),
+            MotionKind::Exclusive,
+        ))
     }
 }
 
@@ -5134,6 +5213,9 @@ fn do_char_delete<H: crate::types::Host>(
     use hjkl_buffer::{Edit, MotionKind, Position};
     ed.push_undo();
     ed.sync_buffer_content_from_textarea();
+    // Collect deleted chars so we can write them to the unnamed register
+    // (vim's `x`/`X` populate `"` so that `xp` round-trips the char).
+    let mut deleted = String::new();
     for _ in 0..count {
         let cursor = buf_cursor_pos(&ed.buffer);
         let line_chars = buf_line_chars(&ed.buffer, cursor.row);
@@ -5143,22 +5225,34 @@ fn do_char_delete<H: crate::types::Host>(
             if cursor.col >= line_chars {
                 continue;
             }
-            ed.mutate_edit(Edit::DeleteRange {
+            let inverse = ed.mutate_edit(Edit::DeleteRange {
                 start: cursor,
                 end: Position::new(cursor.row, cursor.col + 1),
                 kind: MotionKind::Char,
             });
+            if let Edit::InsertStr { text, .. } = inverse {
+                deleted.push_str(&text);
+            }
         } else {
             // `X` — delete the char before the cursor.
             if cursor.col == 0 {
                 continue;
             }
-            ed.mutate_edit(Edit::DeleteRange {
+            let inverse = ed.mutate_edit(Edit::DeleteRange {
                 start: Position::new(cursor.row, cursor.col - 1),
                 end: cursor,
                 kind: MotionKind::Char,
             });
+            if let Edit::InsertStr { text, .. } = inverse {
+                // X deletes backwards; prepend so the register text
+                // matches reading order (first deleted char first).
+                deleted = text + &deleted;
+            }
         }
+    }
+    if !deleted.is_empty() {
+        ed.record_yank_to_host(deleted.clone());
+        ed.record_delete(deleted, false);
     }
     ed.push_buffer_cursor_to_textarea();
 }
@@ -5400,6 +5494,10 @@ pub(crate) fn do_undo<H: crate::types::Host>(ed: &mut Editor<hjkl_buffer::Buffer
         ed.restore(lines, cursor);
     }
     ed.vim.mode = Mode::Normal;
+    // The restored cursor came from a snapshot taken in insert mode
+    // (before the insert started) and may be past the last valid
+    // normal-mode column. Clamp it now, same as Esc-from-insert does.
+    clamp_cursor_to_normal_mode(ed);
 }
 
 pub(crate) fn do_redo<H: crate::types::Host>(ed: &mut Editor<hjkl_buffer::Buffer, H>) {
@@ -5720,10 +5818,12 @@ mod tests {
 
     #[test]
     fn da_quote_deletes_with_quotes() {
+        // `da"` eats the trailing space after the closing quote so the
+        // result matches vim's "around" text-object whitespace rule.
         let mut e = editor_with("foo \"bar\" baz");
         e.jump_cursor(0, 6);
         run_keys(&mut e, "da\"");
-        assert_eq!(e.buffer().lines()[0], "foo  baz");
+        assert_eq!(e.buffer().lines()[0], "foo baz");
     }
 
     #[test]
@@ -6254,10 +6354,11 @@ mod tests {
 
     #[test]
     fn da_double_quote_deletes_around() {
+        // `da"` eats the trailing space — matches vim's around-whitespace rule.
         let mut e = editor_with("a \"hello\" b");
         e.jump_cursor(0, 4);
         run_keys(&mut e, "da\"");
-        assert_eq!(e.buffer().lines()[0], "a  b");
+        assert_eq!(e.buffer().lines()[0], "a b");
     }
 
     #[test]
@@ -6270,10 +6371,11 @@ mod tests {
 
     #[test]
     fn da_single_quote_deletes_around() {
+        // `da'` eats the trailing space — matches vim's around-whitespace rule.
         let mut e = editor_with("x 'foo' y");
         e.jump_cursor(0, 4);
         run_keys(&mut e, "da'");
-        assert_eq!(e.buffer().lines()[0], "x  y");
+        assert_eq!(e.buffer().lines()[0], "x y");
     }
 
     #[test]
@@ -6286,10 +6388,11 @@ mod tests {
 
     #[test]
     fn da_backtick_deletes_around() {
+        // `da`` eats the trailing space — matches vim's around-whitespace rule.
         let mut e = editor_with("p `q` r");
         e.jump_cursor(0, 3);
         run_keys(&mut e, "da`");
-        assert_eq!(e.buffer().lines()[0], "p  r");
+        assert_eq!(e.buffer().lines()[0], "p r");
     }
 
     #[test]
@@ -6638,10 +6741,11 @@ mod tests {
 
     #[test]
     fn da_single_quote() {
+        // `da'` eats the trailing space — matches vim's around-whitespace rule.
         let mut e = editor_with("say 'hello' now");
         e.jump_cursor(0, 7);
         run_keys(&mut e, "da'");
-        assert_eq!(e.buffer().lines()[0], "say  now");
+        assert_eq!(e.buffer().lines()[0], "say now");
     }
 
     #[test]
@@ -9564,5 +9668,127 @@ mod tests {
             "    let x = 1}",
             "mid-line `}}` should not dedent"
         );
+    }
+
+    // ─── Vim-compat divergence fixes (issue #24) ─────────────────────
+
+    // Fix #1: x/X populate the unnamed register.
+    #[test]
+    fn count_5x_fills_unnamed_register() {
+        let mut e = editor_with("hello world\n");
+        e.jump_cursor(0, 0);
+        run_keys(&mut e, "5x");
+        assert_eq!(e.buffer().lines()[0], " world");
+        assert_eq!(e.cursor(), (0, 0));
+        assert_eq!(e.yank(), "hello");
+    }
+
+    #[test]
+    fn x_fills_unnamed_register_single_char() {
+        let mut e = editor_with("abc\n");
+        e.jump_cursor(0, 0);
+        run_keys(&mut e, "x");
+        assert_eq!(e.buffer().lines()[0], "bc");
+        assert_eq!(e.yank(), "a");
+    }
+
+    #[test]
+    fn big_x_fills_unnamed_register() {
+        let mut e = editor_with("hello\n");
+        e.jump_cursor(0, 3);
+        run_keys(&mut e, "X");
+        assert_eq!(e.buffer().lines()[0], "helo");
+        assert_eq!(e.yank(), "l");
+    }
+
+    // Fix #2: G lands on last content row, not phantom trailing-empty row.
+    #[test]
+    fn g_motion_trailing_newline_lands_on_last_content_row() {
+        let mut e = editor_with("foo\nbar\nbaz\n");
+        e.jump_cursor(0, 0);
+        run_keys(&mut e, "G");
+        // buffer is stored as ["foo","bar","baz",""] — G must land on row 2 ("baz").
+        assert_eq!(
+            e.cursor().0,
+            2,
+            "G should land on row 2 (baz), not row 3 (phantom empty)"
+        );
+    }
+
+    // Fix #3: dd on last line clamps cursor to new last content row.
+    #[test]
+    fn dd_last_line_clamps_cursor_to_new_last_row() {
+        let mut e = editor_with("foo\nbar\n");
+        e.jump_cursor(1, 0);
+        run_keys(&mut e, "dd");
+        assert_eq!(e.buffer().lines()[0], "foo");
+        assert_eq!(
+            e.cursor(),
+            (0, 0),
+            "cursor should clamp to row 0 after dd on last content line"
+        );
+    }
+
+    // Fix #4: d$ cursor lands on last char, not one past.
+    #[test]
+    fn d_dollar_cursor_on_last_char() {
+        let mut e = editor_with("hello world\n");
+        e.jump_cursor(0, 5);
+        run_keys(&mut e, "d$");
+        assert_eq!(e.buffer().lines()[0], "hello");
+        assert_eq!(
+            e.cursor(),
+            (0, 4),
+            "d$ should leave cursor on col 4, not col 5"
+        );
+    }
+
+    // Fix #5: undo clamps cursor to last valid normal-mode col.
+    #[test]
+    fn undo_insert_clamps_cursor_to_last_valid_col() {
+        let mut e = editor_with("hello\n");
+        e.jump_cursor(0, 5); // one-past-last, as in oracle initial_cursor
+        run_keys(&mut e, "a world<Esc>u");
+        assert_eq!(e.buffer().lines()[0], "hello");
+        assert_eq!(
+            e.cursor(),
+            (0, 4),
+            "undo should clamp cursor to col 4 on 'hello'"
+        );
+    }
+
+    // Fix #6: da" eats trailing whitespace when present.
+    #[test]
+    fn da_doublequote_eats_trailing_whitespace() {
+        let mut e = editor_with("say \"hello\" there\n");
+        e.jump_cursor(0, 6);
+        run_keys(&mut e, "da\"");
+        assert_eq!(e.buffer().lines()[0], "say there");
+        assert_eq!(e.cursor().1, 4, "cursor should be at col 4 after da\"");
+    }
+
+    // Fix #7: daB cursor off-by-one — clamp to new last col.
+    #[test]
+    fn dab_cursor_col_clamped_after_delete() {
+        let mut e = editor_with("fn x() {\n    body\n}\n");
+        e.jump_cursor(1, 4);
+        run_keys(&mut e, "daB");
+        assert_eq!(e.buffer().lines()[0], "fn x() ");
+        assert_eq!(
+            e.cursor(),
+            (0, 6),
+            "daB should leave cursor at col 6, not 7"
+        );
+    }
+
+    // Fix #8: diB preserves surrounding newlines on multi-line block.
+    #[test]
+    fn dib_preserves_surrounding_newlines() {
+        let mut e = editor_with("{\n    body\n}\n");
+        e.jump_cursor(1, 4);
+        run_keys(&mut e, "diB");
+        assert_eq!(e.buffer().lines()[0], "{");
+        assert_eq!(e.buffer().lines()[1], "}");
+        assert_eq!(e.cursor().0, 1, "cursor should be on the '}}' line");
     }
 }

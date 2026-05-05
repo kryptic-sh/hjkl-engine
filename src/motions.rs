@@ -266,12 +266,23 @@ pub fn move_top<B: Cursor + Query>(buf: &mut B) {
 
 /// `G` — last row (or `count - 1` when `count > 0`), first non-blank.
 /// `count = 0` (the unprefixed form) jumps to the buffer's bottom.
+///
+/// Vim treats a trailing `\n` as a line terminator rather than a
+/// separator, so `"foo\nbar\nbaz\n"` is a 3-line file. The engine
+/// stores it as `["foo", "bar", "baz", ""]` (4 rows). For bare `G` we
+/// skip the trailing empty row so the cursor lands on the last
+/// content-bearing line, matching vim's behaviour.
 pub fn move_bottom<B: Cursor + Query>(buf: &mut B, count: usize) {
-    let last = read_row_count(buf).saturating_sub(1);
+    let raw_last = read_row_count(buf).saturating_sub(1);
     let target = if count == 0 {
-        last
+        // Skip a single trailing empty row produced by a trailing `\n`.
+        if raw_last > 0 && read_line(buf, raw_last).map(str::is_empty).unwrap_or(false) {
+            raw_last - 1
+        } else {
+            raw_last
+        }
     } else {
-        (count - 1).min(last)
+        (count - 1).min(raw_last)
     };
     write_cursor(buf, Position::new(target, 0));
     move_first_non_blank(buf);

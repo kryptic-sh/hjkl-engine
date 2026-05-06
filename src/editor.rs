@@ -2379,7 +2379,7 @@ impl<H: crate::types::Host> Editor<hjkl_buffer::Buffer, H> {
     /// rows from each edge. Replaces the bare
     /// `Buffer::ensure_cursor_visible` call at end-of-step so motions
     /// don't park the cursor on the very last visible row.
-    pub(crate) fn ensure_cursor_in_scrolloff(&mut self) {
+    pub fn ensure_cursor_in_scrolloff(&mut self) {
         let height = self.viewport_height.load(Ordering::Relaxed) as usize;
         if height == 0 {
             // 0.0.42 (Patch C-δ.7): viewport math lifted onto engine

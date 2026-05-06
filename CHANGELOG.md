@@ -6,8 +6,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-05-06
+
 ### Added
 
+- `Editor::ensure_cursor_in_scrolloff` promoted from `pub(crate)` to `pub` so
+  hosts can reveal the cursor after non-engine-driven jumps (e.g. LSP `gd`
+  goto-definition, `]d` diagnostic nav). Without this call the cursor lands on
+  the right row but the viewport stays parked, leaving the cursor off- screen.
+  Engine-driven motions still call it automatically end-of-step.
 - `Settings.numberwidth` (default 4, range 1..=20) with `:set numberwidth=N` /
   `:set nuw=N` ex-command surface, matching vim's `'numberwidth'` option. Gutter
   width is now `max(numberwidth, digits+1)` instead of a fixed `digits+2`.
@@ -129,7 +136,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 - Standalone `LICENSE`, `.gitignore`, and `ci.yml` workflow at the repo root.
 
-[Unreleased]: https://github.com/kryptic-sh/hjkl-engine/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/kryptic-sh/hjkl-engine/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.4.1
 [0.4.0]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.4.0
 [0.3.8]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.8
 [0.3.7]: https://github.com/kryptic-sh/hjkl-engine/releases/tag/v0.3.7
